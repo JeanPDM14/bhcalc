@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora de Balance Hidroelectrolítico Pediátrico</title>
+  <!-- Paleta de colores -->
+  <style>
+    :root {
+      --c-dark: #161F26;
+      --c-blue: #0E2347;
+      --c-green: #719416;
+      --c-light: #F0F3F7;
+    }
+    body{font-family:Arial,Helvetica,sans-serif;background:var(--c-light);margin:0;padding:20px;color:var(--c-dark)}
+    header{background:var(--c-light);text-align:center;padding:10px;margin:-20px -20px 20px;border-bottom:1px solid var(--c-blue);border-radius:0 0 12px 12px;}
+    header img{height:60px}
+    h1{margin:0 0 10px;color:var(--c-dark)}
+    h2{margin:0 0 10px;color:var(--c-dark)}
+    .grid{display:grid;gap:12px}
+    .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .card{background:#fff;border:1px solid var(--c-blue);border-radius:14px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+    label{font-size:12px;color:var(--c-blue);display:block;margin-bottom:4px}
+    input[type="number"],input[type="text"],input[type="date"]{width:100%;border:1px solid #cfd3d9;border-radius:12px;padding:8px 10px;font-size:14px}
+    select{width:100%;border:1px solid #cfd3d9;border-radius:12px;padding:8px 10px;font-size:14px}
+    .row{display:flex;gap:8px;align-items:center}
+    .muted{font-size:12px;color:var(--c-blue)}
+    .btn{background:var(--c-dark);color:#fff;border:none;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
+    .btn.secondary{background:var(--c-green)}
+    .btn.ghost{background:var(--c-light);color:var(--c-dark);border:1px solid var(--c-blue)}
+    .stats{display:grid;gap:10px;grid-template-columns:repeat(3,minmax(0,1fr))}
+    .stat{background:#fff;border:1px solid var(--c-blue);border-radius:14px;padding:12px}
+    .stat .k{font-size:22px;font-weight:700;color:var(--c-dark)}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{border-top:1px solid var(--c-blue);padding:8px;text-align:left}
+    th{background:var(--c-light)}
+    .w100{width:100%}
+    @media (max-width: 900px){.g2,.g3,.stats{grid-template-columns:1fr}}
+    footer{background:var(--c-dark);color:var(--c-light);text-align:center;padding:10px;margin-top:20px;border-radius:12px}
+    /* Extras: badges, tabs, charts */
+    .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700}
+    .badge.ok{background:#e7f5ed;color:#0c5132;border:1px solid #b7e1c7}
+    .badge.warn{background:#fff4e5;color:#7a2e0e;border:1px solid #ffd8a8}
+    .badge.danger{background:#ffe3e3;color:#842029;border:1px solid #ffa8a8}
+    .help{cursor:help;border-bottom:1px dotted var(--c-blue)}
+    .tabs{display:flex;gap:6px;margin:12px 0}
+    .tab{padding:8px 10px;border:1px solid #d1d5db;border-bottom:0;border-radius:10px 10px 0 0;background:#fff;cursor:pointer}
+    .tab.active{background:var(--c-light);color:var(--c-blue);font-weight:700}
+    .panel{border:1px solid #d1d5db;border-radius:0 12px 12px 12px;background:#fff;padding:12px}
+    .small{font-size:12px;color:#555}
+    hr.soft{border:0;border-top:1px solid #e5e7eb;margin:10px 0}
+    .chart{width:100%;height:180px;border:1px solid #e5e7eb;border-radius:12px;background:#fff}
+  </style>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <!-- Encabezado con logo -->
+  <header>
+    <img src="Recurso 2@300x.png" alt="Logo Academia Altruus">
+  </header>
+  <!-- Pestañas de navegación -->
+  <div class="tabs" id="appTabs">
+    <div class="tab active" data-tab="main">Registro</div>
+    <div class="tab" data-tab="plan24">Mantenimiento / Plan 24 h</div>
+    <div class="tab" data-tab="electrolitos">Electrolitos</div>
+    <div class="tab" data-tab="scores">PEWS / SIPA</div>
+    <div class="tab" data-tab="seguimiento">Seguimiento</div>
+  </div>
+  <!-- Panel principal: registro -->
+  <div class="panel" id="panel-main">
+    <h1>Calculadora de Balance Hidroelectrolítico Pediátrico</h1>
+    <p class="muted">Incluye registro de paciente (historia, DNI, nombre, fecha de nacimiento con cálculo de edad) y guardado local.</p>
+    <!-- Formulario de datos del paciente y parámetros -->
+    <div class="grid g2">
+      <div class="card">
+        <h2>Datos del paciente</h2>
+        <div class="grid g2">
+          <div>
+            <label>N° de historia</label>
+            <input type="text" id="historia" placeholder="Ej. 00123456">
+          </div>
+          <div>
+            <label>DNI</label>
+            <input type="text" id="dni" placeholder="Ej. 12345678" maxlength="12">
+          </div>
+          <div class="g2 w100" style="display:grid; grid-template-columns: 2fr 1fr; gap: 12px;">
+            <div>
+              <label>Nombre completo</label>
+              <input type="text" id="nombre" placeholder="Apellidos y nombres">
+            </div>
+            <div>
+              <label>F. Nacimiento</label>
+              <input type="date" id="fnac">
+            </div>
+          </div>
+          <div>
+            <label>Edad (auto)</label>
+            <input type="text" id="edadTxt" readonly placeholder="Años · meses · días">
+          </div>
+          <div>
+            <label>Fecha/Hora del registro</label>
+            <input type="text" id="fechaReg" readonly>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Parámetros del registro</h2>
+        <div class="grid g3">
+          <div>
+            <label>Peso actual (kg)</label>
+            <input type="number" id="peso" step="0.1" value="8">
+          </div>
+          <div>
+            <label>Peso previo (kg)</label>
+            <input type="number" id="pesoPrev" step="0.1" value="8">
+          </div>
+          <div>
+            <label>Horas del registro</label>
+            <input type="number" id="horas" step="1" value="24">
+          </div>
+          <div>
+            <label>Temperatura (°C)</label>
+            <input type="number" id="temp" step="0.1" value="37">
+          </div>
+          <div class="row">
+            <input type="checkbox" id="incluirPI" checked>
+            <label for="incluirPI">Incluir PI en balance</label>
+          </div>
+        </div>
+        <p class="muted">SC = ((4·kg)+7)/(kg+90). PI: &lt;10kg 33·kg·h/24 | 10–40kg 400·SC·h/24 | &gt;40kg 0.5·kg·h. +10%/°C &gt;37.</p>
+      </div>
+    </div>
+    <!-- Ingresos y egresos -->
+    <div class="grid g2">
+      <div class="card">
+        <h2>Ingresos (ml)</h2>
+        <div class="grid g2">
+          <div><label>Leche materna</label><input type="number" id="i_leche" value="0" step="0.001"></div>
+          <div><label>Agua</label><input type="number" id="i_agua" value="0" step="0.001"></div>
+          <div><label>Mazamorra</label><input type="number" id="i_mazamorra" value="0" step="0.001"></div>
+          <div><label>Dieta (papillas/sopa)</label><input type="number" id="i_dieta" value="0" step="0.001"></div>
+          <div><label>Dextrosa IV</label><input type="number" id="i_dextrosa" value="0" step="0.001"></div>
+          <div><label>NPT</label><input type="number" id="i_npt" value="0" step="0.001"></div>
+          <div><label>SSN/SPE/RL IV</label><input type="number" id="i_ssn" value="0" step="0.001"></div>
+          <div><label>Medicamentos IV</label><input type="number" id="i_meds" value="0" step="0.001"></div>
+          <div><label>Otros ingresos</label><input type="number" id="i_otros" value="0" step="0.001"></div>
+        </div>
+        <p><b>Total ingresos:</b> <span id="ingTotal">0</span> ml</p>
+      </div>
+
+      <div class="card">
+        <h2>Egresos (ml)</h2>
+        <div class="grid g2">
+          <div><label>Orina</label><input type="number" id="e_orina" value="0" step="0.001"></div>
+          <div><label>Heces (líquidas)</label><input type="number" id="e_heces" value="0" step="0.001"></div>
+          <div><label>Vómitos</label><input type="number" id="e_vomitos" value="0" step="0.001"></div>
+          <div><label>Drenajes</label><input type="number" id="e_drenajes" value="0" step="0.001"></div>
+          <div><label>Aspirado gástrico</label><input type="number" id="e_asp" value="0" step="0.001"></div>
+          <div><label>Otros egresos</label><input type="number" id="e_otros" value="0" step="0.001"></div>
+        </div>
+        <p><b>Egresos sin PI:</b> <span id="egrSinPI">0</span> ml</p>
+        <p><b>PI:</b> <span id="pi">0</span> ml</p>
+        <p><b>Egresos con PI:</b> <span id="egrConPI">0</span> ml</p>
+      </div>
+    </div>
+    <!-- KPIs principales -->
+    <div class="row" style="gap:8px;margin:8px 0;"><button class="btn ghost" onclick="crearCitaDias(2)">Crear control en 2 días</button><span class="small">Agenda rápida (enlaza a Google Calendar)</span></div>
+    <div class="stats">
+      <div class="stat"><div class="muted">SC</div><div class="k"><span id="sc">0</span> m²</div></div>
+      <div class="stat"><div class="muted">Flujo urinario</div><div class="k"><span id="fuKgH">0</span> cc/kg·h</div><div class="muted">Normal 0.500–5.000 | Oliguria &lt;0.500</div></div>
+      <div class="stat"><div class="muted">Flujo urinario (SC)</div><div class="k"><span id="fuM2H">0</span> cc/m²·h</div><div class="muted">Referencia 12–80</div></div>
+      <div class="stat"><div class="muted">Flujo fecal</div><div class="k"><span id="ffKgH">0</span> cc/kg·h</div><div class="muted">Alto ≥10</div></div>
+      <div class="stat"><div class="muted">Balance</div><div class="k"><span id="balance">0</span> ml</div><div class="muted" id="balNote"></div></div>
+      <div class="stat"><div class="muted">Δ Peso</div><div class="k"><span id="deltaPeso">0</span> kg</div><div class="muted"><span id="deltaPct">0</span>%</div></div>
+    </div>
+    <!-- Acciones principales -->
+    <div class="row" style="margin-top:12px; gap:12px;">
+      <button class="btn secondary" id="btnGuardar">Guardar registro</button>
+      <button class="btn ghost" id="btnExport">Exportar CSV</button>
+      <button class="btn ghost" onclick="window.open('bh_panel_seguimiento.html','_blank')">Panel de seguimiento</button>
+      <span class="muted" id="saveMsg"></span>
+    </div>
+    <!-- Tabla de registros -->
+    <div class="card" style="margin-top:14px;">
+      <h2>Registros guardados (local)</h2>
+      <div class="muted">Borra el almacenamiento del navegador para limpiar la lista.</div>
+      <div style="overflow:auto; max-height:320px; margin-top:8px;">
+        <table id="tabla">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Historia</th>
+              <th>DNI</th>
+              <th>Nombre</th>
+              <th>Edad</th>
+              <th>Peso</th>
+              <th>Horas</th>
+              <th>SC</th>
+              <th>PI</th>
+              <th>FU cc/kg·h</th>
+              <th>FF cc/kg·h</th>
+              <th>Balance (ml)</th>
+              <th>Tags</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div> <!-- Fin panel-main -->
+  <!-- Panel plan 24 h -->
+  <div class="panel" id="panel-plan24" style="display:none">
+    <h2>Mantenimiento y Plan 24 h (Holliday–Segar 100–50–20)</h2>
+    <div class="grid g3">
+      <div class="card"><label>% Deshidratación estimada</label><input type="number" id="hs_pct" step="0.5" value="0"></div>
+      <div class="card"><label>Peso objetivo (kg) <span class="small">(opcional)</span></label><input type="number" id="hs_peso_obj" step="0.1" placeholder="dejar vacío si no aplica"></div>
+      <div class="card">
+        <label>Fluido sugerido <span class="help" title="Solo guía: decide según contexto clínico, Na, glucemia y riesgo de edema.">ⓘ</span></label>
+        <select id="hs_fluido">
+          <option>SSN 0.9 %</option>
+          <option>Ringer Lactato</option>
+          <option>D5 % + KCl + NaCl</option>
+          <option>Mixto (personalizado)</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid g3">
+      <div class="stat"><div class="muted">Mantenimiento 24 h</div><div class="k"><span id="hs_mant24">0</span> ml</div><div class="small">Regla 100–50–20</div></div>
+      <div class="stat"><div class="muted">Déficit</div><div class="k"><span id="hs_def">0</span> ml</div><div class="small">peso × %DH × 10</div></div>
+      <div class="stat"><div class="muted">Plan total</div><div class="k"><span id="hs_total">0</span> ml</div><div class="small">24 h (mL y mL/h)</div></div>
+    </div>
+    <p class="small">Flujo objetivo: <b><span id="hs_ml_h">0</span> mL/h</b>. Ajusta por pérdidas en curso y tolerancia.</p>
+    <hr class="soft">
+    <div class="small"><b>Nota de seguridad:</b> usa como referencia inicial. Revisa electrolitos, glucemia y perfusión. Evita sobrecarga en cardiopatía/renal.</div>
+    <div class="row" style="gap:8px;margin:8px 0;"><button class="btn secondary" id="btnSavePlan24">Guardar Plan 24 h</button><span class="small">Guarda este módulo con la etiqueta plan24</span></div>
+  </div>
+  <!-- Panel electrolitos -->
+  <div class="panel" id="panel-electrolitos" style="display:none">
+    <h2>Cálculos de electrolitos (opcional)</h2>
+    <div class="grid g3">
+      <div class="card">
+        <h3>Hipernatremia: déficit de agua</h3>
+        <label>Na actual (mEq/L)</label><input type="number" id="na_act" step="0.1">
+        <label>Na deseado (mEq/L)</label><input type="number" id="na_goal" step="0.1" value="145">
+        <label>Peso (kg)</label><input type="number" id="na_peso" step="0.1">
+        <label>Fracción TBW</label>
+        <select id="na_tbw">
+          <option value="0.8">RN/1–6m (0.8)</option>
+          <option value="0.7" selected>Niño pequeño (0.7)</option>
+          <option value="0.6">Niño mayor (0.6)</option>
+          <option value="0.5">Adolescente (0.5)</option>
+        </select>
+        <p class="small">Déficit agua ≈ TBW×peso×(Na_act/Na_goal − 1)</p>
+        <div class="k"><span id="na_defagua">0</span> L</div>
+      </div>
+      <div class="card">
+        <h3>Hiponatremia: déficit de sodio</h3>
+        <label>Na actual (mEq/L)</label><input type="number" id="hpo_na" step="0.1">
+        <label>Na objetivo (mEq/L)</label><input type="number" id="hpo_goal" step="0.1" value="130">
+        <label>Peso (kg)</label><input type="number" id="hpo_peso" step="0.1">
+        <p class="small">Déficit Na ≈ (Na_obj − Na_act) × 0.6 × peso</p>
+        <div class="k"><span id="hpo_defna">0</span> mEq</div>
+      </div>
+      <div class="card">
+        <h3>Checklist de seguridad</h3>
+        <ul class="small">
+          <li>No corregir Na > 10–12 mEq/L por 24 h (riesgo de desmielinización / edema cerebral).</li>
+          <li>Revaluar clínicamente y con electrolitos cada 4–6 h.</li>
+          <li>Ajustar por pérdidas en curso (vómitos/diarrea/drenajes).</li>
+          <li>Documentar indicación, cálculo y control.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="row" style="gap:8px;margin:8px 0;"><button class="btn secondary" id="btnSaveElectro">Guardar Electrolitos</button><span class="small">Guarda este módulo con la etiqueta electrolitos</span></div>
+  </div>
+  <!-- Panel scores -->
+  <div class="panel" id="panel-scores" style="display:none">
+    <h2>PEWS básico y SIPA</h2>
+    <div class="grid g3">
+      <div class="card">
+        <h3>PEWS</h3>
+        <label>FR (rpm)</label><input type="number" id="pews_fr">
+        <label>SatO₂ (%)</label><input type="number" id="pews_sat">
+        <label>Trabajo respiratorio</label>
+        <select id="pews_tr"><option value="0">Ninguno</option><option value="1">Leve</option><option value="2">Moderado</option><option value="3">Severo</option></select>
+        <label>Estado general</label>
+        <select id="pews_estado"><option value="0">Alerta</option><option value="1">Irritable</option><option value="2">Letárgico</option></select>
+        <div class="k">Puntaje: <span id="pews_score">0</span> <span id="pews_flag" class="badge ok">OK</span></div>
+      </div>
+      <div class="card">
+        <h3>SIPA</h3>
+        <label>FC (lpm)</label><input type="number" id="sipa_fc">
+        <label>TAS (mmHg)</label><input type="number" id="sipa_tas">
+        <label>Edad (años)</label><input type="number" id="sipa_age" step="0.1">
+        <div class="k">SIPA: <span id="sipa_val">0</span> <span id="sipa_flag" class="badge ok">OK</span></div>
+        <p class="small">SIPA = FC / TAS; umbrales varían por edad.</p>
+      </div>
+      <div class="card">
+        <h3>Interpretación automática</h3>
+        <div class="small" id="auto_interp">—</div>
+      </div>
+    </div>
+    <div class="row" style="gap:8px;margin:8px 0;"><button class="btn secondary" id="btnSaveScores">Guardar Scores</button><span class="small">Guarda este módulo con la etiqueta scores</span></div>
+  </div>
+  <!-- Panel seguimiento -->
+  <div class="panel" id="panel-seguimiento" style="display:none">
+    <h2>Seguimiento por paciente</h2>
+    <div class="grid g2">
+      <div class="card">
+        <label>Filtrar por Historia o DNI</label>
+        <input type="text" id="seg_q" placeholder="Historia o DNI">
+        <label>Rango de fechas</label>
+        <div class="row"><input type="date" id="seg_from"><input type="date" id="seg_to"></div>
+        <label>Etiquetas (coma)</label>
+        <input type="text" id="seg_tags" placeholder="diarrea,sepsis">
+        <button class="btn ghost" id="seg_filtrar">Aplicar filtros</button>
+      </div>
+      <div class="card">
+        <div class="muted">Balance (ml) / FU (cc/kg·h) / Peso (kg)</div>
+        <svg id="seg_chart" class="chart"></svg>
+      </div>
+    </div>
+  </div>
+  <!-- Pie de página -->
+  <footer>
+    Autor: Jean Pierre Del Aguila Matta
+  </footer>
+  <!-- Lógica -->
+  <script>
+  // Funciones básicas
+  function two(n, d=3){ return isFinite(n) ? Number(n).toFixed(d) : "—"; }
+  function sum(arr){ return arr.map(x => Number(x||0)).reduce((a,b)=>a+b,0); }
+  function calcEdad(fechaStr){
+    if(!fechaStr) return {txt:"", anios:null, meses:null, dias:null};
+    const hoy = new Date();
+    const n = new Date(fechaStr);
+    let a = hoy.getFullYear()-n.getFullYear();
+    let m = hoy.getMonth()-n.getMonth();
+    let d = hoy.getDate()-n.getDate();
+    if(d<0){ m--; d += new Date(hoy.getFullYear(), hoy.getMonth(), 0).getDate(); }
+    if(m<0){ a--; m += 12; }
+    return {txt: `${a}a ${m}m ${d}d`, anios:a, meses:m, dias:d};
+  }
+  // Obtener todos los valores
+  function getVals(){
+    const peso = Number(document.getElementById('peso').value||0);
+    const pesoPrev = Number(document.getElementById('pesoPrev').value||0);
+    const horas = Number(document.getElementById('horas').value||0);
+    const temp = Number(document.getElementById('temp').value||37);
+    const SC = (peso>0)?(((peso*4)+7)/(peso+90)):0;
+    let PI_base = 0;
+    if(peso>0 && horas>0){
+      if(peso<10) PI_base = 33*peso*(horas/24);
+      else if(peso<=40) PI_base = 400*SC*(horas/24);
+      else PI_base = 0.5*peso*horas;
+    }
+    const extra = Math.max(0, temp-37)*0.10;
+    const PI = PI_base*(1+extra);
+    const ing = sum(['i_leche','i_agua','i_mazamorra','i_dieta','i_dextrosa','i_npt','i_ssn','i_meds','i_otros'].map(id=>document.getElementById(id).value));
+    const eSin = sum(['e_orina','e_heces','e_vomitos','e_drenajes','e_asp','e_otros'].map(id=>document.getElementById(id).value));
+    const eCon = eSin + PI;
+    const incluirPI = document.getElementById('incluirPI').checked;
+    const balance = incluirPI ? (ing - eCon) : (ing - eSin);
+    const FUkgH = (peso>0 && horas>0)? Number(document.getElementById('e_orina').value||0)/(peso*horas) : NaN;
+    const FUm2H = (SC>0 && horas>0)? Number(document.getElementById('e_orina').value||0)/(SC*horas) : NaN;
+    const FFkgH = (peso>0 && horas>0)? Number(document.getElementById('e_heces').value||0)/(peso*horas) : NaN;
+    const delta = peso - pesoPrev;
+    const deltaPct = (pesoPrev>0)? (delta/pesoPrev*100) : NaN;
+    return {peso,pesoPrev,horas,temp,SC,PI,ing,eSin,eCon,balance,incluirPI,FUkgH,FUm2H,FFkgH,delta,deltaPct};
+  }
+  // Renderizar KPIs y campos
+  function render(){
+    const v = getVals();
+    document.getElementById('sc').innerText = two(v.SC, 3);
+    document.getElementById('pi').innerText = two(v.PI, 3);
+    document.getElementById('ingTotal').innerText = two(v.ing, 3);
+    document.getElementById('egrSinPI').innerText = two(v.eSin, 3);
+    document.getElementById('egrConPI').innerText = two(v.eCon, 3);
+    document.getElementById('fuKgH').innerText = two(v.FUkgH, 3);
+    document.getElementById('fuM2H').innerText = two(v.FUm2H, 3);
+    document.getElementById('ffKgH').innerText = two(v.FFkgH, 3);
+    document.getElementById('balance').innerText = two(v.balance, 3);
+    document.getElementById('balNote').innerText = v.incluirPI ? "(Incluye PI)" : "(Sin PI)";
+    document.getElementById('deltaPeso').innerText = two(v.delta, 3);
+    document.getElementById('deltaPct').innerText = two(v.deltaPct, 3);
+    const fn = document.getElementById('fnac').value;
+    const edad = calcEdad(fn);
+    document.getElementById('edadTxt').value = edad.txt;
+    document.getElementById('fechaReg').value = new Date().toLocaleString();
+    autoInterpret();
+  }
+  // Adjuntar eventos a inputs
+  function attachInputs(){
+    document.querySelectorAll('input').forEach(el=>{
+      el.addEventListener('input', render);
+      el.addEventListener('change', render);
+    });
+  }
+  // Guardar registro principal
+  function saveRegistro(){
+    const edad = calcEdad(document.getElementById('fnac').value).txt;
+    const v = getVals();
+    const reg = {
+      fecha: new Date().toISOString(),
+      historia: document.getElementById('historia').value || '',
+      dni: document.getElementById('dni').value || '',
+      nombre: document.getElementById('nombre').value || '',
+      fnac: document.getElementById('fnac').value || '',
+      edad,
+      peso: v.peso,
+      horas: v.horas,
+      SC: v.SC,
+      PI: v.PI,
+      FUkgH: v.FUkgH,
+      FFkgH: v.FFkgH,
+      balance: v.balance,
+      tags: ''
+    };
+    const key = 'bhp_registros';
+    const arr = JSON.parse(localStorage.getItem(key) || '[]');
+    arr.unshift(reg);
+    localStorage.setItem(key, JSON.stringify(arr));
+    document.getElementById('saveMsg').innerText = 'Registro guardado ✓';
+    pintarTabla();
+    setTimeout(()=>document.getElementById('saveMsg').innerText = '', 2500);
+  }
+  // Guardar módulo con etiqueta y datos extra opcionales
+  function saveRegistroModulo(tag, extra){
+    const edad = calcEdad(document.getElementById('fnac').value).txt;
+    const v = getVals();
+    const reg = {
+      fecha: new Date().toISOString(),
+      historia: document.getElementById('historia').value || '',
+      dni: document.getElementById('dni').value || '',
+      nombre: document.getElementById('nombre').value || '',
+      fnac: document.getElementById('fnac').value || '',
+      edad,
+      peso: v.peso,
+      horas: v.horas,
+      SC: v.SC,
+      PI: v.PI,
+      FUkgH: v.FUkgH,
+      FFkgH: v.FFkgH,
+      balance: v.balance,
+      tags: tag || ''
+    };
+    if(extra && typeof extra === 'object'){ reg.extra = extra; }
+    const key = 'bhp_registros';
+    const arr = JSON.parse(localStorage.getItem(key) || '[]');
+    arr.unshift(reg);
+    localStorage.setItem(key, JSON.stringify(arr));
+    document.getElementById('saveMsg').innerText = 'Módulo guardado ('+tag+') ✓';
+    pintarTabla();
+    setTimeout(()=>document.getElementById('saveMsg').innerText = '', 2500);
+  }
+  // Pintar tabla con filas y acciones
+  function pintarTabla(){
+    const arr = JSON.parse(localStorage.getItem('bhp_registros') || '[]');
+    const tb = document.querySelector('#tabla tbody');
+    tb.innerHTML = '';
+    arr.forEach((r, idx)=>{
+      const tr = document.createElement('tr');
+      const c = (x)=>{ const td=document.createElement('td'); td.textContent=x; return td; };
+      tr.appendChild(c(new Date(r.fecha).toLocaleString()));
+      tr.appendChild(c(r.historia));
+      tr.appendChild(c(r.dni));
+      tr.appendChild(c(r.nombre));
+      tr.appendChild(c(r.edad));
+      tr.appendChild(c(two(r.peso,3)));
+      tr.appendChild(c(r.horas));
+      tr.appendChild(c(two(r.SC,3)));
+      tr.appendChild(c(two(r.PI,3)));
+      tr.appendChild(c(two(r.FUkgH,3)));
+      tr.appendChild(c(two(r.FFkgH,3)));
+      tr.appendChild(c(two(r.balance,3)));
+      tr.appendChild(c(r.tags || ''));
+      // Acciones
+      const td = document.createElement('td');
+      td.className='actions';
+      const btnE=document.createElement('button'); btnE.textContent='Editar'; btnE.className='btn ghost'; btnE.onclick=()=>cargarRegistro(idx);
+      const btnD=document.createElement('button'); btnD.textContent='Eliminar'; btnD.className='btn ghost'; btnD.onclick=()=>borrarRegistro(idx);
+      const btnDu=document.createElement('button'); btnDu.textContent='Duplicar'; btnDu.className='btn ghost'; btnDu.onclick=()=>duplicarRegistro(idx);
+      td.append(btnE, btnD, btnDu);
+      tr.appendChild(td);
+      tb.appendChild(tr);
+    });
+    // Encabezado de acciones si no existe
+    const thead = document.querySelector('#tabla thead tr');
+    if(thead && !thead.querySelector('.h-actions')){
+      const th=document.createElement('th'); th.textContent='Acciones'; th.className='h-actions'; thead.appendChild(th);
+    }
+  }
+  // Cargar registro seleccionado en el formulario
+  function cargarRegistro(idx){
+    const arr = JSON.parse(localStorage.getItem('bhp_registros') || '[]');
+    const r = arr[idx]; if(!r) return;
+    document.getElementById('historia').value = r.historia || '';
+    document.getElementById('dni').value = r.dni || '';
+    document.getElementById('nombre').value = r.nombre || '';
+    document.getElementById('fnac').value = r.fnac || '';
+    document.getElementById('pesoPrev').value = r.peso || '';
+    render();
+    alert('Registro cargado. Peso previo actualizado con el del registro seleccionado.');
+  }
+  // Borrar registro
+  function borrarRegistro(idx){
+    const arr = JSON.parse(localStorage.getItem('bhp_registros') || '[]');
+    if(!arr[idx]) return;
+    if(!confirm('¿Eliminar este registro?')) return;
+    arr.splice(idx,1);
+    localStorage.setItem('bhp_registros', JSON.stringify(arr));
+    pintarTabla();
+  }
+  // Duplicar registro
+  function duplicarRegistro(idx){
+    const arr = JSON.parse(localStorage.getItem('bhp_registros') || '[]');
+    const r = arr[idx]; if(!r) return;
+    const copy = {...r, fecha: new Date().toISOString()};
+    arr.unshift(copy);
+    localStorage.setItem('bhp_registros', JSON.stringify(arr));
+    pintarTabla();
+  }
+  // Holliday-Segar
+  function hsCalc(){
+    const peso = Number(document.getElementById('peso').value||0);
+    const pct = Number(document.getElementById('hs_pct').value||0);
+    let mant24 = 0;
+    if(peso>0){
+      const p1=Math.min(peso,10); mant24+=p1*100;
+      const p2=Math.min(Math.max(peso-10,0),10); mant24+=p2*50;
+      const p3=Math.max(peso-20,0); mant24+=p3*20;
+    }
+    const deficit = peso>0 ? (peso*(pct/100))*10*100 : 0;
+    const total = mant24 + deficit;
+    const mlh = total/24;
+    document.getElementById('hs_mant24').innerText = two(mant24,0);
+    document.getElementById('hs_def').innerText = two(deficit,0);
+    document.getElementById('hs_total').innerText = two(total,0);
+    document.getElementById('hs_ml_h').innerText = two(mlh,1);
+  }
+  ['hs_pct','hs_peso_obj','hs_fluido','peso'].forEach(id=>{
+    const el = document.getElementById(id); if(el){ el.addEventListener('input', hsCalc); el.addEventListener('change', hsCalc); }
+  });
+  // Electrolitos
+  function electroCalc(){
+    const na_act = Number(document.getElementById('na_act').value||0);
+    const na_goal = Number(document.getElementById('na_goal').value||145);
+    const na_peso = Number(document.getElementById('na_peso').value||0);
+    const tbw = Number(document.getElementById('na_tbw').value||0.7);
+    const defA = (tbw*na_peso)*( (na_goal>0? (na_act/na_goal):0) -1);
+    document.getElementById('na_defagua').innerText = two(defA,3);
+    const hpo_na = Number(document.getElementById('hpo_na').value||0);
+    const hpo_goal = Number(document.getElementById('hpo_goal').value||130);
+    const hpo_peso = Number(document.getElementById('hpo_peso').value||0);
+    const defNa = (hpo_goal - hpo_na)*0.6*hpo_peso;
+    document.getElementById('hpo_defna').innerText = two(defNa,1);
+  }
+  ['na_act','na_goal','na_peso','na_tbw','hpo_na','hpo_goal','hpo_peso'].forEach(id=>{
+    const el = document.getElementById(id); if(el){ el.addEventListener('input', electroCalc); el.addEventListener('change', electroCalc); }
+  });
+  // Scores
+  function scoresCalc(){
+    const fr = Number(document.getElementById('pews_fr').value||0);
+    const sat = Number(document.getElementById('pews_sat').value||0);
+    const tr = Number(document.getElementById('pews_tr').value||0);
+    const est = Number(document.getElementById('pews_estado').value||0);
+    let pews = tr + est;
+    if(fr>60) pews+=2; else if(fr>40) pews+=1;
+    if(sat<90) pews+=2; else if(sat<94) pews+=1;
+    document.getElementById('pews_score').innerText = pews;
+    const pf = document.getElementById('pews_flag');
+    pf.className = 'badge ' + (pews>=4?'danger':(pews>=2?'warn':'ok'));
+    pf.textContent = (pews>=4?'Alerta':(pews>=2?'Vigilar':'OK'));
+    // SIPA
+    const fc = Number(document.getElementById('sipa_fc').value||0);
+    const tas = Number(document.getElementById('sipa_tas').value||1);
+    const age = Number(document.getElementById('sipa_age').value||0);
+    const sipa = fc/tas;
+    document.getElementById('sipa_val').innerText = two(sipa,2);
+    const sflag = document.getElementById('sipa_flag');
+    const thr = age<1?1.2:age<6?1.1:1.0;
+    sflag.className = 'badge ' + (sipa>thr?'danger':'ok');
+    sflag.textContent = (sipa>thr?'Riesgo':'OK');
+    autoInterpret();
+  }
+  ['pews_fr','pews_sat','pews_tr','pews_estado','sipa_fc','sipa_tas','sipa_age'].forEach(id=>{
+    const el = document.getElementById(id); if(el){ el.addEventListener('input', scoresCalc); el.addEventListener('change', scoresCalc); }
+  });
+  // Interpretación automática de balance / FU / FF
+  function autoInterpret(){
+    const v = getVals();
+    const horas = Math.max(1, v.horas||1);
+    const balKgH = (v.balance/(v.peso||1))/horas;
+    const notes=[];
+    if(balKgH < -10) notes.push('Déficit relevante (balance < -10 mL/kg·h)');
+    if(v.FUkgH < 0.5) notes.push('Oliguria (FU < 0.5 mL/kg·h)');
+    if(v.FFkgH >= 10) notes.push('Diarrea alta (FF ≥ 10 mL/kg·h)');
+    document.getElementById('auto_interp').textContent = notes.join(' · ') || '—';
+  }
+  // Seguimiento: filtrar y graficar
+  function segFiltrar(){
+    const q = (document.getElementById('seg_q').value||'').trim().toLowerCase();
+    const from = document.getElementById('seg_from').value ? new Date(document.getElementById('seg_from').value) : null;
+    const to = document.getElementById('seg_to').value ? new Date(document.getElementById('seg_to').value) : null;
+    const tags = (document.getElementById('seg_tags').value||'').toLowerCase().split(',').map(s=>s.trim()).filter(Boolean);
+    const arr = JSON.parse(localStorage.getItem('bhp_registros')||'[]');
+    const fil = arr.filter(r=>{
+      const hit = (!q || (String(r.historia||'').toLowerCase().includes(q) || String(r.dni||'').toLowerCase().includes(q)));
+      const dt = new Date(r.fecha);
+      const inR = (!from || dt>=from) && (!to || dt<=to);
+      const okT = (!tags.length || (r.tags && tags.some(t=>String(r.tags).toLowerCase().includes(t))));
+      return hit && inR && okT;
+    });
+    drawChart(fil.slice().reverse());
+  }
+  function drawChart(items){
+    const svg = document.getElementById('seg_chart');
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    const W = svg.clientWidth||600, H = svg.clientHeight||180;
+    const pad=30;
+    const n = items.length;
+    if(!n){ svg.appendChild(document.createTextNode('Sin datos')); return; }
+    const bal = items.map(r=>Number(r.balance||0));
+    const fu = items.map(r=>Number(r.FUkgH||0));
+    const peso = items.map(r=>Number(r.peso||0));
+    const all = bal.concat(fu).concat(peso);
+    const min = Math.min(...all);
+    const max = Math.max(...all);
+    const sx = i => pad + i*(W-2*pad)/Math.max(1,n-1);
+    const sy = v => H-pad - ((v-min)/(max-min||1))*(H-2*pad);
+    function path(arr){ return arr.map((v,i)=> (i?'L':'M')+sx(i)+','+sy(v)).join(' '); }
+    const mk=(d,stroke)=>{ const p=document.createElementNS('http://www.w3.org/2000/svg','path'); p.setAttribute('d',d); p.setAttribute('fill','none'); p.setAttribute('stroke',stroke); p.setAttribute('stroke-width','2'); svg.appendChild(p); };
+    mk(path(bal),'#0E2347'); mk(path(fu),'#719416'); mk(path(peso),'#161F26');
+  }
+  document.getElementById('seg_filtrar').addEventListener('click', segFiltrar);
+  // Cambio de pestañas
+  document.querySelectorAll('#appTabs .tab').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      document.querySelectorAll('#appTabs .tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      const map = {main:'#panel-main', plan24:'#panel-plan24', electrolitos:'#panel-electrolitos', scores:'#panel-scores', seguimiento:'#panel-seguimiento'};
+      for(const k in map){ document.querySelector(map[k]).style.display='none'; }
+      const key = t.getAttribute('data-tab');
+      const id = key==='main' ? '#panel-main' : '#panel-'+key;
+      document.querySelector(id).style.display='block';
+    });
+  });
+  // Atajos de teclado
+  document.addEventListener('keydown', (e)=>{
+    if(e.ctrlKey && (e.key==='s' || e.key==='S')){ e.preventDefault(); saveRegistro(); }
+    if(e.ctrlKey && (e.key==='n' || e.key==='N')){ e.preventDefault(); window.location.reload(); }
+  });
+  // Agenda Google calendar
+  function crearCitaDias(dias){
+    const nombre = document.getElementById('nombre').value || 'Control pediátrico';
+    const start = new Date(Date.now()+dias*24*60*60*1000);
+    const end = new Date(start.getTime()+30*60*1000);
+    function isoNoTZ(d){ return d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; }
+    const url = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(nombre)+'&dates='+isoNoTZ(start)+'/'+isoNoTZ(end);
+    window.open(url,'_blank');
+  }
+  // Registrar service worker para PWA
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    });
+  }
+  // Conexiones de botones
+  document.getElementById('btnGuardar').addEventListener('click', saveRegistro);
+  document.getElementById('btnExport').addEventListener('click', ()=>{
+    const arr = JSON.parse(localStorage.getItem('bhp_registros') || '[]');
+    if(!arr.length){ alert('No hay registros guardados.'); return; }
+    const cols=['fecha','historia','dni','nombre','fnac','edad','peso','horas','SC','PI','FUkgH','FFkgH','balance','tags'];
+    const head = cols.join(',');
+    const rows = arr.map(r=> cols.map(k=> `"${String(r[k]??'').replaceAll('"','""')}"`).join(','));
+    const csv = [head, ...rows].join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='balance_hidroelectrolitico_registros.csv'; a.click();
+  });
+  const btnSP=document.getElementById('btnSavePlan24'); if(btnSP){ btnSP.addEventListener('click', ()=>{
+    const mant24 = Number((document.getElementById('hs_mant24')?.textContent||'0').replace(',','.'));
+    const def24 = Number((document.getElementById('hs_def')?.textContent||'0').replace(',','.'));
+    const tot24 = Number((document.getElementById('hs_total')?.textContent||'0').replace(',','.'));
+    const mlh = Number((document.getElementById('hs_ml_h')?.textContent||'0').replace(',','.'));
+    const fluido = (document.getElementById('hs_fluido')||{}).value;
+    saveRegistroModulo('plan24', {mant24:mant24, deficit:def24, total:tot24, ml_h:mlh, fluido});
+  }); }
+  const btnSE=document.getElementById('btnSaveElectro'); if(btnSE){ btnSE.addEventListener('click', ()=>{
+    const na_act = document.getElementById('na_act')?.value || '';
+    const na_goal = document.getElementById('na_goal')?.value || '';
+    const na_def = document.getElementById('na_defagua')?.textContent || '';
+    const hpo_na = document.getElementById('hpo_na')?.value || '';
+    const hpo_goal = document.getElementById('hpo_goal')?.value || '';
+    const hpo_def = document.getElementById('hpo_defna')?.textContent || '';
+    saveRegistroModulo('electrolitos', {na_act,na_goal,def_agua:na_def,hpo_na,hpo_goal,def_na:hpo_def});
+  }); }
+  const btnSS=document.getElementById('btnSaveScores'); if(btnSS){ btnSS.addEventListener('click', ()=>{
+    const pews = document.getElementById('pews_score')?.textContent || '';
+    const sipa = document.getElementById('sipa_val')?.textContent || '';
+    saveRegistroModulo('scores', {pews,sipa});
+  }); }
+  // Iniciar
+  attachInputs();
+  render();
+  pintarTabla();
+  hsCalc();
+  electroCalc();
+  scoresCalc();
+  </script>
+</body>
+</html>
