@@ -84,6 +84,17 @@
             <label>DNI</label>
             <input type="text" id="dni" placeholder="Ej. 12345678" maxlength="12">
           </div>
+          <!-- Campos cama y sala añadidos -->
+          <div class="row" style="gap:12px;margin-top:6px;">
+            <div>
+              <label>N° de cama</label>
+              <input type="text" id="cama" placeholder="p.ej., 12B">
+            </div>
+            <div>
+              <label>Sala</label>
+              <input type="text" id="sala" placeholder="p.ej., Pediatría A">
+            </div>
+          </div>
           <div class="g2 w100" style="display:grid; grid-template-columns: 2fr 1fr; gap: 12px;">
             <div>
               <label>Nombre completo</label>
@@ -102,6 +113,13 @@
             <label>Fecha/Hora del registro</label>
             <input type="text" id="fechaReg" readonly>
           </div>
+        </div>
+        <!-- Controles de pacientes (guardar/cargar/lista) -->
+        <div class="row" style="gap:8px;margin-top:8px;">
+          <button class="btn" id="btnGuardarPaciente">Guardar paciente</button>
+          <button class="btn secondary" id="btnCargarPaciente">Cargar por Historia/DNI</button>
+          <button class="btn ghost" id="btnVentanaPac">Ventana de pacientes</button>
+          <span class="small" id="msgPac"></span>
         </div>
       </div>
 
@@ -203,6 +221,8 @@
               <th>FF cc/kg·h</th>
               <th>Balance (ml)</th>
               <th>Tags</th>
+              <th>Cama</th>
+              <th>Sala</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -409,6 +429,8 @@
       nombre: document.getElementById('nombre').value || '',
       fnac: document.getElementById('fnac').value || '',
       edad,
+      cama: document.getElementById('cama')?.value || '',
+      sala: document.getElementById('sala')?.value || '',
       peso: v.peso,
       horas: v.horas,
       SC: v.SC,
@@ -437,6 +459,8 @@
       nombre: document.getElementById('nombre').value || '',
       fnac: document.getElementById('fnac').value || '',
       edad,
+      cama: document.getElementById('cama')?.value || '',
+      sala: document.getElementById('sala')?.value || '',
       peso: v.peso,
       horas: v.horas,
       SC: v.SC,
@@ -476,6 +500,8 @@
       tr.appendChild(c(two(r.FFkgH,3)));
       tr.appendChild(c(two(r.balance,3)));
       tr.appendChild(c(r.tags || ''));
+      tr.appendChild(c(r.cama || ''));
+      tr.appendChild(c(r.sala || ''));
       // Acciones
       const td = document.createElement('td');
       td.className='actions';
@@ -667,12 +693,153 @@
       navigator.serviceWorker.register('sw.js').catch(()=>{});
     });
   }
+  // ========= Gestión de pacientes =========
+  // Cargar lista de pacientes desde localStorage
+  function _loadPacientes(){
+    try{
+      return JSON.parse(localStorage.getItem('bhp_pacientes') || '[]');
+    }catch(e){ return []; }
+  }
+  // Guardar lista de pacientes
+  function _savePacientes(list){
+    localStorage.setItem('bhp_pacientes', JSON.stringify(list));
+  }
+  // Insertar o actualizar un paciente (por historia o DNI)
+  function upsertPaciente(p){
+    const list = _loadPacientes();
+    const h = (p.historia || '').trim();
+    const d = (p.dni || '').trim();
+    const idx = list.findIndex(o => (h && o.historia === h) || (d && o.dni === d));
+    if(idx >= 0){
+      list[idx] = Object.assign({}, list[idx], p);
+    } else {
+      list.unshift(p);
+    }
+    _savePacientes(list);
+  }
+  // Buscar paciente por historia o DNI
+  function findPaciente(key){
+    const list = _loadPacientes();
+    const k = (key || '').trim();
+    return list.find(o => o.historia === k || o.dni === k);
+  }
+  // Evento para guardar paciente desde el formulario principal
+  (function(){
+    const btn = document.getElementById('btnGuardarPaciente');
+    if(btn){
+      btn.addEventListener('click', function(){
+        const h = (document.getElementById('historia').value || '').trim();
+        const d = (document.getElementById('dni').value || '').trim();
+        const n = (document.getElementById('nombre').value || '').trim();
+        const f = document.getElementById('fnac').value || '';
+        const cama = (document.getElementById('cama').value || '').trim();
+        const sala = (document.getElementById('sala').value || '').trim();
+        const msgEl = document.getElementById('msgPac');
+        if(!h && !d){ msgEl.textContent = 'Ingresa historia o DNI'; return; }
+        upsertPaciente({historia:h, dni:d, nombre:n, fnac:f, cama:cama, sala:sala});
+        msgEl.textContent = 'Paciente guardado';
+        setTimeout(() => { msgEl.textContent = ''; }, 2000);
+      });
+    }
+  })();
+  // Evento para cargar paciente por historia o DNI
+  (function(){
+    const btn = document.getElementById('btnCargarPaciente');
+    if(btn){
+      btn.addEventListener('click', function(){
+        const h = (document.getElementById('historia').value || '').trim();
+        const d = (document.getElementById('dni').value || '').trim();
+        const key = h || d;
+        const msgEl = document.getElementById('msgPac');
+        if(!key){ msgEl.textContent = 'Ingresa historia o DNI'; return; }
+        const p = findPaciente(key);
+        if(!p){ msgEl.textContent = 'Paciente no encontrado'; return; }
+        document.getElementById('historia').value = p.historia || '';
+        document.getElementById('dni').value = p.dni || '';
+        document.getElementById('nombre').value = p.nombre || '';
+        document.getElementById('fnac').value = p.fnac || '';
+        document.getElementById('cama').value = p.cama || '';
+        document.getElementById('sala').value = p.sala || '';
+        // actualizar edad calculada
+        const eObj = calcEdad(p.fnac || '');
+        const edadTxt = document.getElementById('edadTxt');
+        if(edadTxt){ if(edadTxt.value !== undefined) edadTxt.value = eObj.txt; else edadTxt.textContent = eObj.txt; }
+        msgEl.textContent = 'Paciente cargado';
+        setTimeout(() => { msgEl.textContent = ''; }, 2000);
+        render();
+      });
+    }
+  })();
+  // Ventana de gestión de pacientes
+  (function(){
+    const btn = document.getElementById('btnVentanaPac');
+    if(btn){
+      btn.addEventListener('click', function(){
+        const w = window.open('', 'pacientes', 'width=640,height=720');
+        // CSS para la ventana
+        const style = `
+          body{font-family:system-ui,Segoe UI,Arial;margin:14px;}
+          input,button{padding:8px;margin:4px;}
+          table{border-collapse:collapse;width:100%;}
+          th,td{border:1px solid #ddd;padding:6px;text-align:left;}
+          .row{display:flex;gap:8px;flex-wrap:wrap;}
+          .muted{color:#6c757d;font-size:12px;}
+        `;
+        let html = '<!doctype html><html><head><meta charset="utf-8"><title>Pacientes</title><style>' + style + '</style></head><body>';
+        html += '<h2>Pacientes</h2>';
+        html += '<div class="row">';
+        html += '<input id="p_hist" placeholder="Historia" style="width:120px;">';
+        html += '<input id="p_dni" placeholder="DNI" style="width:120px;">';
+        html += '<input id="p_nombre" placeholder="Nombre" style="flex:1;">';
+        html += '<input id="p_fnac" type="date">';
+        html += '<input id="p_cama" placeholder="Cama" style="width:80px;">';
+        html += '<input id="p_sala" placeholder="Sala" style="width:140px;">';
+        html += '<button id="p_save">Guardar/Actualizar</button>';
+        html += '</div>';
+        html += '<div class="row"><input id="p_search" placeholder="Buscar (nombre/historia/DNI)" style="flex:1;"><span class="muted">Filtra en vivo</span></div>';
+        html += '<div id="p_msg" class="muted"></div>';
+        html += '<table><thead><tr><th>Historia</th><th>DNI</th><th>Nombre</th><th>F.Nac</th><th>Cama</th><th>Sala</th><th></th></tr></thead><tbody id="p_body"></tbody></table>';
+        html += '<script>';
+        html += 'const KEY="bhp_pacientes";';
+        html += 'const q=id=>document.getElementById(id);';
+        html += 'function _load(){try{return JSON.parse(window.opener.localStorage.getItem(KEY)||"[]");}catch(e){return [];}}';
+        html += 'function _save(arr){ window.opener.localStorage.setItem(KEY, JSON.stringify(arr)); }';
+        html += 'function paint(){ const arr=_load(); const term=(q("p_search").value||"").toLowerCase(); const body=q("p_body"); body.innerHTML=""; arr.forEach((p,i)=>{ if(term && !((p.nombre||"").toLowerCase().includes(term) || (p.historia||"").toLowerCase().includes(term) || (p.dni||"").toLowerCase().includes(term))) return; const tr=document.createElement("tr"); tr.innerHTML = `<td>${p.historia||""}</td><td>${p.dni||""}</td><td>${p.nombre||""}</td><td>${p.fnac||""}</td><td>${p.cama||""}</td><td>${p.sala||""}</td><td><button data-act="select" data-key="${p.historia||p.dni||""}">Sel.</button> <button data-act="del" data-i="${i}">Del</button></td>`; body.appendChild(tr); }); }';
+        html += 'q("p_save").onclick=function(){ const hist=q("p_hist").value.trim(); const d=q("p_dni").value.trim(); if(!hist && !d){ q("p_msg").textContent="Ingresa historia o DNI"; return; } const obj={historia:hist, dni:d, nombre:q("p_nombre").value.trim(), fnac:q("p_fnac").value, cama:q("p_cama").value.trim(), sala:q("p_sala").value.trim()}; let arr=_load(); const idx=arr.findIndex(o=>(hist && o.historia===hist)||(d && o.dni===d)); if(idx>=0){ arr[idx] = Object.assign({}, arr[idx], obj); } else { arr.unshift(obj); } _save(arr); q("p_msg").textContent="Guardado"; setTimeout(()=>{ q("p_msg").textContent="";},1500); paint(); };';
+        html += 'q("p_body").onclick=function(e){ const t=e.target; if(t.tagName!=="BUTTON") return; const act=t.dataset.act; if(act==="del"){ const i=parseInt(t.dataset.i); let arr=_load(); arr.splice(i,1); _save(arr); paint(); return; } if(act==="select"){ const key=t.dataset.key; const arr=_load(); const p=arr.find(o=>o.historia===key || o.dni===key); if(p){ window.opener.postMessage({type:"pacientes:select", pac:p}, "*"); window.close(); } } };';
+        html += 'q("p_search").oninput=paint;';
+        html += 'paint();';
+        html += '<\/script></body></html>';
+        w.document.write(html);
+      });
+    }
+  })();
+  // Manejar mensajes recibidos al seleccionar un paciente desde la ventana
+  window.addEventListener('message', function(e){
+    const data = e.data || {};
+    if(data.type === 'pacientes:select' && data.pac){
+      const p = data.pac;
+      document.getElementById('historia').value = p.historia || '';
+      document.getElementById('dni').value = p.dni || '';
+      document.getElementById('nombre').value = p.nombre || '';
+      document.getElementById('fnac').value = p.fnac || '';
+      document.getElementById('cama').value = p.cama || '';
+      document.getElementById('sala').value = p.sala || '';
+      // recalcular edad
+      const eObj = calcEdad(p.fnac || '');
+      const edadTxt = document.getElementById('edadTxt');
+      if(edadTxt){ if(typeof edadTxt.value !== 'undefined') edadTxt.value = eObj.txt; else edadTxt.textContent = eObj.txt; }
+      document.getElementById('msgPac').textContent = 'Paciente cargado';
+      setTimeout(() => { document.getElementById('msgPac').textContent = ''; }, 2000);
+      render();
+    }
+  });
   // Conexiones de botones
   document.getElementById('btnGuardar').addEventListener('click', saveRegistro);
   document.getElementById('btnExport').addEventListener('click', ()=>{
     const arr = JSON.parse(localStorage.getItem('bhp_registros') || '[]');
     if(!arr.length){ alert('No hay registros guardados.'); return; }
-    const cols=['fecha','historia','dni','nombre','fnac','edad','peso','horas','SC','PI','FUkgH','FFkgH','balance','tags'];
+    const cols=['fecha','historia','dni','nombre','fnac','edad','peso','horas','SC','PI','FUkgH','FFkgH','balance','tags','cama','sala'];
     const head = cols.join(',');
     const rows = arr.map(r=> cols.map(k=> `"${String(r[k]??'').replaceAll('"','""')}"`).join(','));
     const csv = [head, ...rows].join('\n');
